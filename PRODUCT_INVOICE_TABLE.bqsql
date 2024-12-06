@@ -1,0 +1,57 @@
+WITH grouped_invoice As 
+(select  
+    parent_invoice_id,
+    sum(quantity * product_selling_price) As amount_due,
+from 
+    pora-academy-cohort3.jubilee_groceries.invoice As i
+left join 
+    pora-academy-cohort3.jubilee_groceries.product_base_table As p
+    on i.product_id = p.product_id
+group by 
+parent_invoice_id),
+
+discount_given AS (
+    SELECT 
+        pi.id as parent_invoice_id ,
+        p.product_selling_price, 
+        SUM(i.quantity) AS total_quantity_per_purchase,
+        SUM(p.product_selling_price * i.quantity) AS original_amount_due,
+        CASE 
+            WHEN i.promo_code = 0 THEN 0
+            WHEN i.promo_code = 101 THEN 0.05 * SUM(p.product_selling_price * i.quantity)
+            WHEN i.promo_code = 1001 THEN 0.03 * SUM(p.product_selling_price * i.quantity)
+            WHEN i.promo_code = 10001 THEN 0.07 * SUM(p.product_selling_price * i.quantity)
+            ELSE 0
+        END AS discount
+    FROM 
+        pora-academy-cohort3.jubilee_groceries.parent_invoice pi
+    left join
+        pora-academy-cohort3.jubilee_groceries.invoice i
+    ON 
+        pi.id = i.parent_invoice_id
+    left join
+        pora-academy-cohort3.jubilee_groceries.product_base_table As p
+    ON 
+        i.product_id = p.product_id
+    GROUP BY 
+        pi.id, p.product_id, p.product_name, p.product_selling_price, i.promo_code) 
+select 
+    pi.*,
+    gi.amount_due,
+    dg.discount,
+    gi.amount_due - dg.discount as final_amount_due
+from grouped_invoice gi
+join
+discount_given dg
+on gi.parent_invoice_id = dg.parent_invoice_id
+join 
+pora-academy-cohort3.jubilee_groceries.parent_invoice pi
+on gi.parent_invoice_id = pi.id
+ORDER BY 
+    dg.parent_invoice_id;
+
+
+select 
+ *
+from
+pora-academy-cohort3.jubilee_groceries.promotion;
