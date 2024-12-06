@@ -1,0 +1,44 @@
+CTE_1
+WITH eligible_bouncers AS 
+(SELECT 
+    id as customer_id,
+    '101' as promo_code,
+FROM
+    pora-academy-cohort3.jubilee_groceries.customer AS C
+WHERE 
+    is_in_force=1
+    and id not in (
+        select DISTINCT customer_id from pora-academy-cohort3.jubilee_groceries.invoice)
+    order by customer_id);
+    
+    -- CTE2
+WITH Bulk_buzzer AS (
+    SELECT 
+        C.id AS customer_id,
+        '1001' AS promo_code
+    FROM 
+        pora-academy-cohort3.jubilee_groceries.customer C
+    WHERE 
+        is_in_force = 1
+        AND C.id IN (
+            SELECT i.customer_id
+            FROM pora-academy-cohort3.jubilee_groceries.invoice i
+            GROUP BY i.customer_id
+            HAVING 
+                AVG(CASE 
+                    WHEN i.created_on BETWEEN '2024-09-01' AND '2024-09-30' 
+                    THEN i.quantity 
+                    ELSE NULL 
+                END) 
+                > 
+                AVG(CASE 
+                    WHEN i.created_on BETWEEN '2024-08-01' AND '2024-08-31' 
+                    THEN i.quantity 
+                    ELSE NULL 
+                END)
+        )
+    ORDER BY 
+        C.id
+)
+SELECT * 
+FROM Bulk_buzzer;
